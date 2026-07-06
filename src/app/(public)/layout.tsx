@@ -4,6 +4,8 @@ import Image from 'next/image'
 import { ShoppingCart } from 'lucide-react'
 import { getUser } from '@/lib/auth/get-user'
 import { getClientIdByProfileId, getCartItemCount } from '@/lib/interest-lists/queries'
+import { isCliente, isAdmin, isVendedor } from '@/lib/auth/roles'
+import { signOut } from '@/lib/auth/actions'
 
 async function getCartCount(): Promise<number> {
   try {
@@ -18,7 +20,10 @@ async function getCartCount(): Promise<number> {
 }
 
 export default async function PublicLayout({ children }: { children: ReactNode }) {
-  const cartCount = await getCartCount()
+  const [cartCount, user] = await Promise.all([getCartCount(), getUser()])
+
+  const isClienteUser = user && isCliente(user.role)
+  const isStaffUser = user && (isAdmin(user.role) || isVendedor(user.role))
 
   return (
     <div className="min-h-screen">
@@ -39,12 +44,54 @@ export default async function PublicLayout({ children }: { children: ReactNode }
               Contacto
             </Link>
 
-            <Link
-              href="/login"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Iniciar sesión
-            </Link>
+            {isClienteUser ? (
+              <>
+                <Link
+                  href="/mi-cuenta"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Mi cuenta
+                </Link>
+                <Link
+                  href="/mis-presupuestos"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Mis presupuestos
+                </Link>
+                <form action={signOut}>
+                  <button
+                    type="submit"
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Salir
+                  </button>
+                </form>
+              </>
+            ) : isStaffUser ? (
+              <>
+                <Link
+                  href="/admin/dashboard"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Panel admin
+                </Link>
+                <form action={signOut}>
+                  <button
+                    type="submit"
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Salir
+                  </button>
+                </form>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Iniciar sesión
+              </Link>
+            )}
 
             <Link href="/mi-lista" className="relative flex items-center">
               <ShoppingCart className="h-5 w-5 text-muted-foreground hover:text-foreground transition-colors" />

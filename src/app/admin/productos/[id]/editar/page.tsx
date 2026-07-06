@@ -8,6 +8,7 @@ import { updateProduct } from '@/lib/products/actions'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ImagePicker } from '@/components/features/products/ImagePicker'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -96,16 +97,8 @@ export default async function EditarProductoPage({ params }: Props) {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="images">
-            Imágenes <span className="text-muted-foreground text-xs">(una URL por línea)</span>
-          </Label>
-          <textarea
-            id="images"
-            name="images"
-            rows={3}
-            defaultValue={(product.images ?? []).join('\n')}
-            className="w-full rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 resize-y"
-          />
+          <Label>Imágenes</Label>
+          <ImagePicker defaultImages={product.images ?? []} />
         </div>
 
         <div className="flex items-center gap-2">

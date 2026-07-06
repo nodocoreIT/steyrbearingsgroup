@@ -11,6 +11,7 @@ export type NotificationType =
   | 'new_quote_request'
   | 'no_purchase_alert'
   | 'voice_consultation'
+  | 'client_pending_activation'
 
 interface NotificationPayload {
   quoteId?: string
@@ -56,11 +57,16 @@ function buildNotificationContent(
       }
     case 'voice_consultation':
       return {
-        title: 'New voice consultation',
-        body: 'A new voice consultation is waiting for review.',
+        title: 'Nueva consulta de voz',
+        body: 'Hay una consulta de voz pendiente de revisión.',
+      }
+    case 'client_pending_activation':
+      return {
+        title: 'Nuevo cliente registrado',
+        body: `${payload.clientName ?? 'Un cliente'} se registró y está esperando activación.`,
       }
     default:
-      return { title: 'Notification', body: 'You have a new notification.' }
+      return { title: 'Notificación', body: 'Tenés una nueva notificación.' }
   }
 }
 
@@ -81,6 +87,7 @@ async function resolveTargetUserIds(
     'new_quote_request',
     'no_purchase_alert',
     'voice_consultation',
+    'client_pending_activation',
   ]
 
   if (adminTypes.includes(type)) {

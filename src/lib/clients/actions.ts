@@ -3,6 +3,7 @@
 import { db } from '@/db'
 import { clients, profiles } from '@/db/schema'
 import { eq } from 'drizzle-orm'
+import { redirect } from 'next/navigation'
 import { validateCuitAfip } from '@/lib/afip/index'
 import { getCachedAfipResult, setCachedAfipResult } from '@/lib/afip/cache'
 import { checkCuitBcra, deriveBcraRiskLevel } from '@/lib/bcra/index'
@@ -12,6 +13,16 @@ import { createClient as createSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { ActionResult } from '@/lib/types/action-result'
 import { revalidatePath } from 'next/cache'
+import { notify } from '@/lib/notifications'
+
+function toTitleCase(str: string): string {
+  return str
+    .trim()
+    .replace(/\s+/g, ' ')
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+}
 
 export interface RegisterClientInput {
   email: string
@@ -40,7 +51,9 @@ export interface RegisterClientResult {
 export async function registerClient(
   input: RegisterClientInput
 ): Promise<ActionResult<RegisterClientResult>> {
-  const { email, password, fullName, cuit, phone, companyName } = input
+  const { email, password, cuit, phone } = input
+  const fullName = toTitleCase(input.fullName)
+  const companyName = input.companyName ? toTitleCase(input.companyName) : undefined
 
   // Step 1: validate CUIT format before any external call
   if (!isValidCuit(cuit)) {
@@ -111,6 +124,12 @@ export async function registerClient(
     validateClientCuit(client.id).catch((err) => {
       console.error('[VALIDATION] Background validation failed:', err)
     })
+
+    // Step 7: notify admins of new pending activation
+    notify('client_pending_activation', {
+      clientId: client.id,
+      clientName: fullName,
+    }).catch(() => null)
 
     return {
       success: true,
@@ -238,6 +257,169 @@ export async function revalidateClient(
       error: err instanceof Error ? err.message : 'La revalidación falló',
     }
   }
+}
+
+/**
+ * Updates editable client fields (profile + client row).
+ */
+export async function updateClient(
+  clientId: string,
+  formData: FormData
+): Promise<ActionResult<void>> {
+  try {
+    const supabase = await createSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'No autorizado', code: 'UNAUTHENTICATED' }
+
+    const rows = await db
+      .select({ profileId: clients.profileId })
+      .from(clients)
+      .where(eq(clients.id, clientId))
+      .limit(1)
+
+    if (!rows[0]) return { success: false, error: 'Cliente no encontrado', code: 'NOT_FOUND' }
+
+    const fullName = toTitleCase(formData.get('fullName') as string)
+    const companyName = formData.get('companyName') ? toTitleCase(formData.get('companyName') as string) : null
+    const phone = formData.get('phone') as string | null
+    const razonSocial = formData.get('razonSocial') as string | null
+    const cuit = formData.get('cuit') as string
+    const industry = formData.get('industry') as string | null
+
+    if (!isValidCuit(cuit)) {
+      return { success: false, error: 'El formato del CUIT es inválido.', code: 'INVALID_CUIT' }
+    }
+
+    await db
+      .update(profiles)
+      .set({
+        fullName,
+        companyName: companyName || null,
+        phone: phone || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(profiles.id, rows[0].profileId))
+
+    await db
+      .update(clients)
+      .set({
+        cuit,
+        razonSocial: razonSocial || null,
+        industry: industry || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(clients.id, clientId))
+
+    revalidatePath(`/admin/clientes/${clientId}`)
+    revalidatePath('/admin/clientes')
+    return { success: true, data: undefined }
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'La actualización falló',
+    }
+  }
+}
+
+/**
+ * Normalizes fullName and companyName for all existing clients (Title Case).
+ */
+export async function normalizeClientNames(): Promise<ActionResult<{ updated: number }>> {
+  try {
+    const supabase = await createSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'No autorizado', code: 'UNAUTHENTICATED' }
+
+    const rows = await db
+      .select({ id: profiles.id, fullName: profiles.fullName, companyName: profiles.companyName })
+      .from(profiles)
+
+    let updated = 0
+    for (const row of rows) {
+      const normalizedFullName = row.fullName ? toTitleCase(row.fullName) : row.fullName
+      const normalizedCompanyName = row.companyName ? toTitleCase(row.companyName) : row.companyName
+
+      if (normalizedFullName !== row.fullName || normalizedCompanyName !== row.companyName) {
+        await db
+          .update(profiles)
+          .set({ fullName: normalizedFullName ?? '', companyName: normalizedCompanyName, updatedAt: new Date() })
+          .where(eq(profiles.id, row.id))
+        updated++
+      }
+    }
+
+    revalidatePath('/admin/clientes')
+    return { success: true, data: { updated } }
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'La normalización falló',
+    }
+  }
+}
+
+/**
+ * Activates a client account by confirming their email in Supabase Auth.
+ */
+export async function activateClientAccount(clientId: string): Promise<ActionResult<void>> {
+  try {
+    const supabase = await createSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'No autorizado', code: 'UNAUTHENTICATED' }
+
+    const rows = await db
+      .select({ profileId: clients.profileId })
+      .from(clients)
+      .where(eq(clients.id, clientId))
+      .limit(1)
+
+    if (!rows[0]) return { success: false, error: 'Cliente no encontrado', code: 'NOT_FOUND' }
+
+    const admin = createAdminClient()
+    const { error } = await admin.auth.admin.updateUserById(rows[0].profileId, {
+      email_confirm: true,
+    })
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath(`/admin/clientes/${clientId}`)
+    return { success: true, data: undefined }
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'No se pudo activar la cuenta',
+    }
+  }
+}
+
+/**
+ * Deletes a client and their auth user (cascades to profile + client rows).
+ */
+export async function deleteClient(clientId: string): Promise<void> {
+  const supabase = await createSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autorizado')
+
+  const rows = await db
+    .select({ profileId: clients.profileId })
+    .from(clients)
+    .where(eq(clients.id, clientId))
+    .limit(1)
+
+  if (!rows[0]) throw new Error('Cliente no encontrado')
+
+  const { profileId } = rows[0]
+
+  // Delete DB rows first (clients cascades from profiles)
+  await db.delete(clients).where(eq(clients.id, clientId))
+  await db.delete(profiles).where(eq(profiles.id, profileId))
+
+  // Then delete the auth user
+  const adminSupabase = createAdminClient()
+  await adminSupabase.auth.admin.deleteUser(profileId)
+
+  revalidatePath('/admin/clientes')
+  redirect('/admin/clientes')
 }
 
 /**

@@ -10,6 +10,8 @@ import { toggleProductActive, deleteProduct, cloneProduct } from '@/lib/products
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Pencil, Trash2, Copy } from 'lucide-react'
+import { ActionTooltip } from '@/components/ui/action-tooltip'
+import { SearchInput } from '@/components/ui/search-input'
 import {
   Table,
   TableBody,
@@ -103,11 +105,11 @@ export default async function ProductosPage({ searchParams }: PageProps) {
           {/* Filters */}
           <form className="flex gap-2" method="GET">
             <input type="hidden" name="tab" value="products" />
-            <input
-              name="q"
+            <SearchInput
+              param="q"
               defaultValue={q}
               placeholder="Buscar productos…"
-              className="h-8 rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 w-48"
+              className="w-48 h-8"
             />
             <select
               name="categoryId"
@@ -179,42 +181,43 @@ export default async function ProductosPage({ searchParams }: PageProps) {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1 justify-end">
-                      <Link
-                        href={`/admin/productos/${p.id}/editar`}
-                        className={buttonVariants({ variant: 'outline', size: 'sm' })}
-                        title="Editar"
-                      >
-                        <Pencil className="h-3.5 w-3.5 mr-1" />
-                        Editar
-                      </Link>
-                      <form
-                        action={async () => {
-                          'use server'
-                          await cloneProduct(p.id)
-                        }}
-                      >
-                        <Button variant="outline" size="sm" type="submit" title="Clonar">
-                          <Copy className="h-3.5 w-3.5 mr-1" />
-                          Clonar
-                        </Button>
-                      </form>
-                      <form
-                        action={async () => {
-                          'use server'
-                          await deleteProduct(p.id)
-                        }}
-                      >
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          type="submit"
-                          title="Borrar"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      <ActionTooltip label="Editar">
+                        <Link
+                          href={`/admin/productos/${p.id}/editar`}
+                          className={buttonVariants({ variant: 'ghost', size: 'sm' })}
                         >
-                          <Trash2 className="h-3.5 w-3.5 mr-1" />
-                          Borrar
-                        </Button>
-                      </form>
+                          <Pencil className="h-4 w-4" />
+                        </Link>
+                      </ActionTooltip>
+                      <ActionTooltip label="Clonar">
+                        <form
+                          action={async () => {
+                            'use server'
+                            await cloneProduct(p.id)
+                          }}
+                        >
+                          <Button variant="ghost" size="sm" type="submit">
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </form>
+                      </ActionTooltip>
+                      <ActionTooltip label="Borrar">
+                        <form
+                          action={async () => {
+                            'use server'
+                            await deleteProduct(p.id)
+                          }}
+                        >
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            type="submit"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </form>
+                      </ActionTooltip>
                     </div>
                   </TableCell>
                 </TableRow>

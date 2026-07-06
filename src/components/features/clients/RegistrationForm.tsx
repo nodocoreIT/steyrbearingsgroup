@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import Image from 'next/image'
 import Link from 'next/link'
 import { registerClient } from '@/lib/clients/actions'
 import { isValidCuit, formatCuit, normalizeCuit } from '@/lib/utils/cuit'
@@ -59,13 +60,11 @@ export function RegistrationForm() {
   }
 
   function handleCuitChange(raw: string) {
-    // Auto-format as user types
     const digits = normalizeCuit(raw)
     if (digits.length <= 11 && /^\d*$/.test(digits)) {
       const formatted = digits.length === 11 ? formatCuit(digits) : raw
       update('cuit', formatted)
     }
-    // Reset AFIP state when CUIT changes
     setAfipState({ status: 'idle', message: '' })
   }
 
@@ -90,30 +89,30 @@ export function RegistrationForm() {
         const name = json.persona?.razonSocial ?? json.persona?.nombre ?? ''
         setAfipState({
           status: 'valid',
-          message: `CUIT válido — ${name}`,
+          message: `CUIT válido${name ? ` — ${name}` : ''}`,
           razonSocial: name,
         })
         if (name && !formData.razonSocial) {
           update('razonSocial', name)
         }
-      } else if (json.reason === 'api_error') {
-        setAfipState({
-          status: 'degraded',
-          message: 'No se pudo verificar en este momento — podés continuar igual.',
-        })
-      } else {
+      } else if (json.reason === 'inactive') {
+        // Only hard-block if AFIP explicitly says the CUIT is inactive
         setAfipState({
           status: 'invalid',
-          message:
-            json.reason === 'inactive'
-              ? 'Este CUIT está inactivo en AFIP.'
-              : 'CUIT no encontrado en AFIP.',
+          message: 'Este CUIT está inactivo en AFIP.',
+        })
+      } else {
+        // Not found or API error — treat as degraded so the user can continue
+        // Admin will review the account before activating
+        setAfipState({
+          status: 'degraded',
+          message: 'No pudimos verificar el CUIT en AFIP. Podés continuar y lo revisamos nosotros.',
         })
       }
     } catch {
       setAfipState({
         status: 'degraded',
-        message: 'No se pudo verificar en este momento — podés continuar igual.',
+        message: 'No se pudo conectar con AFIP ahora. Podés continuar igual.',
       })
     }
   }
@@ -134,7 +133,8 @@ export function RegistrationForm() {
   function validateStep2(): string | null {
     if (!formData.cuit) return 'El CUIT es obligatorio.'
     if (!isValidCuit(formData.cuit)) return 'CUIT inválido.'
-    if (afipState.status === 'invalid') return 'El CUIT no pudo ser validado. Por favor verificá el número.'
+    // Only block if AFIP explicitly marked it as inactive
+    if (afipState.status === 'invalid') return 'Este CUIT está inactivo en AFIP. Verificá el número.'
     return null
   }
 
@@ -174,19 +174,24 @@ export function RegistrationForm() {
 
   if (success) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Cuenta creada</CardTitle>
-          <CardDescription>
-            Estamos verificando tu CUIT en segundo plano. Recibirás un email cuando tu cuenta esté completamente activada.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link href="/login">
-            <Button variant="outline">Iniciar sesión</Button>
-          </Link>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col items-center text-center gap-6 py-8 px-4 max-w-sm mx-auto">
+        <Image
+          src="/logo-transparente.png"
+          alt="Logo"
+          width={160}
+          height={54}
+          className="object-contain"
+        />
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold">¡Muchas gracias por tu registro!</h1>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Estamos verificando tus datos. En breve vas a recibir un email con la confirmación de tu cuenta.
+          </p>
+        </div>
+        <Link href="/login">
+          <Button variant="outline">Iniciar sesión</Button>
+        </Link>
+      </div>
     )
   }
 
@@ -196,11 +201,11 @@ export function RegistrationForm() {
         <CardTitle>Crear cuenta</CardTitle>
         <CardDescription>
           Paso {step} de 3 —{' '}
-          {step === 1 ? 'Cuenta' : step === 2 ? 'Datos de empresa' : 'Confirmar'}
+          {step === 1 ? 'Datos de acceso' : step === 2 ? 'Datos de empresa' : 'Confirmar'}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {/* Step 1 — Account */}
+        {/* Paso 1 — Cuenta */}
         {step === 1 && (
           <div className="space-y-4">
             <div className="space-y-2">
@@ -211,12 +216,12 @@ export function RegistrationForm() {
                 autoComplete="email"
                 value={formData.email}
                 onChange={(e) => update('email', e.target.value)}
-                placeholder="you@company.com"
+                placeholder="vos@empresa.com"
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Contraseña</Label>
               <Input
                 id="password"
                 type="password"
@@ -228,7 +233,7 @@ export function RegistrationForm() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm password</Label>
+              <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -242,18 +247,18 @@ export function RegistrationForm() {
               <p className="text-sm text-destructive">{formError}</p>
             )}
             <Button className="w-full" onClick={goToStep2}>
-              Continue
+              Continuar
             </Button>
             <p className="text-center text-sm text-muted-foreground">
-              Already have an account?{' '}
+              ¿Ya tenés cuenta?{' '}
               <Link href="/login" className="underline">
-                Sign in
+                Iniciá sesión
               </Link>
             </p>
           </div>
         )}
 
-        {/* Step 2 — Business info */}
+        {/* Paso 2 — Datos de empresa */}
         {step === 2 && (
           <div className="space-y-4">
             <div className="space-y-2">
@@ -273,7 +278,7 @@ export function RegistrationForm() {
                   onClick={validateCuit}
                   disabled={afipState.status === 'loading' || !formData.cuit}
                 >
-                  {afipState.status === 'loading' ? 'Verifying…' : 'Verify'}
+                  {afipState.status === 'loading' ? 'Verificando…' : 'Verificar'}
                 </Button>
               </div>
               {afipState.status === 'valid' && (
@@ -287,17 +292,17 @@ export function RegistrationForm() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="razonSocial">Company name / Full name</Label>
+              <Label htmlFor="razonSocial">Razón social / Nombre</Label>
               <Input
                 id="razonSocial"
                 type="text"
                 value={formData.razonSocial}
                 onChange={(e) => update('razonSocial', e.target.value)}
-                placeholder="Pre-filled from AFIP if verified"
+                placeholder="Se completa automáticamente desde AFIP"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
+              <Label htmlFor="phone">Teléfono</Label>
               <Input
                 id="phone"
                 type="tel"
@@ -311,16 +316,16 @@ export function RegistrationForm() {
             )}
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
-                Back
+                Atrás
               </Button>
               <Button onClick={goToStep3} className="flex-1">
-                Continue
+                Continuar
               </Button>
             </div>
           </div>
         )}
 
-        {/* Step 3 — Confirmation */}
+        {/* Paso 3 — Confirmación */}
         {step === 3 && (
           <div className="space-y-4">
             <div className="space-y-1 text-sm">
@@ -334,20 +339,20 @@ export function RegistrationForm() {
               </p>
               {formData.razonSocial && (
                 <p>
-                  <span className="text-muted-foreground">Name:</span>{' '}
+                  <span className="text-muted-foreground">Razón social:</span>{' '}
                   <span className="font-medium">{formData.razonSocial}</span>
                 </p>
               )}
               {formData.phone && (
                 <p>
-                  <span className="text-muted-foreground">Phone:</span>{' '}
+                  <span className="text-muted-foreground">Teléfono:</span>{' '}
                   <span className="font-medium">{formData.phone}</span>
                 </p>
               )}
             </div>
             {afipState.status === 'degraded' && (
               <p className="text-sm text-yellow-600 bg-yellow-50 p-3 rounded-md">
-                AFIP verification is pending. Your account will be activated once verification completes.
+                La verificación AFIP está pendiente. Vamos a activar tu cuenta una vez que la revisemos.
               </p>
             )}
             {formError && (
@@ -360,10 +365,10 @@ export function RegistrationForm() {
                 className="flex-1"
                 disabled={isPending}
               >
-                Back
+                Atrás
               </Button>
               <Button onClick={submit} className="flex-1" disabled={isPending}>
-                {isPending ? 'Creating account…' : 'Create account'}
+                {isPending ? 'Creando cuenta…' : 'Crear cuenta'}
               </Button>
             </div>
           </div>

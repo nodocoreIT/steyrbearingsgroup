@@ -1,9 +1,14 @@
 export const dynamic = 'force-dynamic'
 
 import { getAllClients } from '@/lib/clients/queries'
+import { deleteClient } from '@/lib/clients/actions'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
+import { SearchInput } from '@/components/ui/search-input'
 import Link from 'next/link'
+import { Pencil, Trash2 } from 'lucide-react'
+import { ActionTooltip } from '@/components/ui/action-tooltip'
+import { NormalizeNamesButton } from '@/components/features/clients/NormalizeNamesButton'
 
 interface SearchParams {
   search?: string
@@ -46,26 +51,44 @@ export default async function ClientesPage({ searchParams }: Props) {
   const params = await searchParams
   const page = Number(params.page ?? 1)
 
-  const clients = await getAllClients({
-    search: params.search,
-    validationStatus: (params.validationStatus as 'pending' | 'validated' | 'invalid' | 'all') ?? 'all',
-    bcraRiskLevel: params.bcraRiskLevel,
-    page,
-  })
+  const [clients, authData] = await Promise.all([
+    getAllClients({
+      search: params.search,
+      validationStatus: (params.validationStatus as 'pending' | 'validated' | 'invalid' | 'all') ?? 'all',
+      bcraRiskLevel: params.bcraRiskLevel,
+      page,
+    }),
+    createAdminClient().auth.admin.listUsers({ perPage: 1000 }),
+  ])
+
+  const unconfirmedIds = new Set(
+    (authData.data?.users ?? [])
+      .filter((u) => !u.email_confirmed_at)
+      .map((u) => u.id)
+  )
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Clientes</h1>
+        <div className="flex items-center gap-2">
+          <NormalizeNamesButton />
+          <Link
+            href="/admin/clientes/nuevo"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            Nuevo cliente
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}
       <div className="flex gap-3 flex-wrap">
         <form className="flex gap-3">
-          <Input
-            name="search"
-            placeholder="Buscar por nombre o CUIT…"
+          <SearchInput
+            param="search"
             defaultValue={params.search}
+            placeholder="Buscar por nombre o CUIT…"
             className="w-64"
           />
           <select
@@ -108,12 +131,13 @@ export default async function ClientesPage({ searchParams }: Props) {
               <th className="text-left px-4 py-3 font-medium">AFIP</th>
               <th className="text-left px-4 py-3 font-medium">BCRA</th>
               <th className="text-left px-4 py-3 font-medium">Registrado</th>
+              <th className="px-4 py-3 font-medium w-20"></th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {clients.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
                   No se encontraron clientes.
                 </td>
               </tr>
@@ -121,12 +145,19 @@ export default async function ClientesPage({ searchParams }: Props) {
               clients.map((client) => (
                 <tr key={client.id} className="hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3">
-                    <Link
-                      href={`/admin/clientes/${client.id}`}
-                      className="font-medium hover:underline"
-                    >
-                      {client.razonSocial ?? client.fullName}
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/admin/clientes/${client.id}`}
+                        className="font-medium hover:underline"
+                      >
+                        {client.razonSocial ?? client.fullName}
+                      </Link>
+                      {unconfirmedIds.has(client.profileId) && (
+                        <Badge className="bg-yellow-100 text-yellow-800 text-[10px] px-1.5 py-0 leading-4">
+                          Sin activar
+                        </Badge>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground font-mono">
                     {client.cuit}
@@ -139,6 +170,33 @@ export default async function ClientesPage({ searchParams }: Props) {
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {new Date(client.createdAt).toLocaleDateString('es-AR')}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <ActionTooltip label="Editar">
+                        <Link
+                          href={`/admin/clientes/${client.id}/editar`}
+                          className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Link>
+                      </ActionTooltip>
+                      <ActionTooltip label="Eliminar">
+                        <form
+                          action={async () => {
+                            'use server'
+                            await deleteClient(client.id)
+                          }}
+                        >
+                          <button
+                            type="submit"
+                            className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </form>
+                      </ActionTooltip>
+                    </div>
                   </td>
                 </tr>
               ))

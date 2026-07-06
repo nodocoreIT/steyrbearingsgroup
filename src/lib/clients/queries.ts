@@ -92,8 +92,10 @@ export async function getClientWithScore(clientId: string) {
       createdAt: clients.createdAt,
       updatedAt: clients.updatedAt,
       fullName: profiles.fullName,
+      companyName: profiles.companyName,
       phone: profiles.phone,
       assignedSalespersonId: profiles.assignedSalespersonId,
+      industry: clients.industry,
       score: clientScores.score,
       scoreLastCalculatedAt: clientScores.calculatedAt,
     })

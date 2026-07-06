@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import Link from 'next/link'
 import { getAllProducts } from '@/lib/products/queries'
 import { getAllCategories } from '@/lib/categories/queries'
+import { createClient } from '@/lib/supabase/server'
 import { ProductCard } from '@/components/features/catalog/ProductCard'
 import { ProductGrid } from '@/components/features/catalog/ProductGrid'
 import { SearchBar } from '@/components/features/catalog/SearchBar'
@@ -77,6 +78,10 @@ export default async function CatalogoPage({ searchParams }: PageProps) {
   const resolvedCategoryId =
     categoryId ||
     (categorySlug ? (categories.find((c) => c.slug === categorySlug)?.id ?? undefined) : undefined)
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const isAuthenticated = !!user
 
   const { data: productList, total, totalPages } = await getAllProducts({
     search: q,
@@ -168,6 +173,7 @@ export default async function CatalogoPage({ searchParams }: PageProps) {
                 images={p.images}
                 categoryName={p.categoryName}
                 slug={p.sku}
+                isAuthenticated={isAuthenticated}
               />
             ))}
           </div>

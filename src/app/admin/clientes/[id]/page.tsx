@@ -5,7 +5,10 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { notFound } from 'next/navigation'
-import { revalidateClient } from '@/lib/clients/actions'
+import { revalidateClient, deleteClient, activateClientAccount } from '@/lib/clients/actions'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { Pencil, Trash2 } from 'lucide-react'
+import { ActionTooltip } from '@/components/ui/action-tooltip'
 import Link from 'next/link'
 import { db } from '@/db'
 import { voiceConsultations } from '@/db/schema'
@@ -84,6 +87,10 @@ export default async function ClienteDetailPage({ params }: Props) {
   const client = await getClientWithScore(id)
   if (!client) notFound()
 
+  const admin = createAdminClient()
+  const { data: authUser } = await admin.auth.admin.getUserById(client.profileId)
+  const emailConfirmed = !!authUser?.user?.email_confirmed_at
+
   const [validation, consultations] = await Promise.all([
     getClientValidationStatus(id),
     db
@@ -103,17 +110,62 @@ export default async function ClienteDetailPage({ params }: Props) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between">
         <Link href="/admin/clientes" className="text-sm text-muted-foreground hover:underline">
           ← Clientes
         </Link>
+        <div className="flex gap-2">
+          <ActionTooltip label="Editar">
+            <Link
+              href={`/admin/clientes/${id}/editar`}
+              className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Pencil className="w-4 h-4" />
+            </Link>
+          </ActionTooltip>
+          <ActionTooltip label="Eliminar">
+            <form
+              action={async () => {
+                'use server'
+                await deleteClient(id)
+              }}
+            >
+              <button
+                type="submit"
+                className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </form>
+          </ActionTooltip>
+        </div>
       </div>
 
-      <div>
-        <h1 className="text-2xl font-bold">
-          {client.razonSocial ?? client.fullName}
-        </h1>
-        <p className="text-muted-foreground font-mono">{client.cuit}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">
+            {client.razonSocial ?? client.fullName}
+          </h1>
+          <p className="text-muted-foreground font-mono">{client.cuit}</p>
+        </div>
+        {!emailConfirmed && (
+          <div className="flex items-center gap-3 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2.5 text-sm shrink-0">
+            <span className="text-yellow-800">Cuenta sin activar</span>
+            <form action={async () => { 'use server'; await activateClientAccount(id) }}>
+              <button
+                type="submit"
+                className="px-3 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700 transition-colors"
+              >
+                Activar cuenta
+              </button>
+            </form>
+          </div>
+        )}
+        {emailConfirmed && (
+          <span className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-1.5 shrink-0">
+            Cuenta activa
+          </span>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

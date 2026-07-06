@@ -55,8 +55,9 @@ export function AddToListButton({
       size="sm"
       onClick={handleClick}
       disabled={loading}
+      className="shrink-0"
     >
-      {loading ? 'Agregando…' : added ? 'Agregado a la lista' : 'Agregar a mi lista'}
+      {loading ? '…' : added ? '✓ Agregado' : 'Agregar'}
     </Button>
   )
 }

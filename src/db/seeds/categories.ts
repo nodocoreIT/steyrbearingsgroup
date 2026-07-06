@@ -1,6 +1,5 @@
 import { db } from '@/db'
 import { categories } from '@/db/schema'
-import { onConflictDoNothing } from 'drizzle-orm/pg-core'
 
 const data = [
   { name: 'Rodamiento de Ruedas',    slug: 'rodamiento-de-ruedas',    sortOrder: 1 },

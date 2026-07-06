@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
 import { getVendedorRanking, getVendedorLastActivity } from '@/lib/analytics/vendedor'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'

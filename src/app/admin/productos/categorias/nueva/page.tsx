@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { redirect } from 'next/navigation'
 import { createCategory } from '@/lib/categories/actions'
 import { Button, buttonVariants } from '@/components/ui/button'

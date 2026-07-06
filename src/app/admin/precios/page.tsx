@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getAllPriceLists } from '@/lib/pricing/queries'
 import { createPriceList } from '@/lib/pricing/actions'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'

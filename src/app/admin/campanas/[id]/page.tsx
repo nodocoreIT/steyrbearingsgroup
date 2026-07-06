@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { notFound } from 'next/navigation'
 import { getCampaignById, getCampaignStats } from '@/lib/campaigns/queries'
 import {

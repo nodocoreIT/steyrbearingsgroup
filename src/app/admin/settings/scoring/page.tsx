@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getScoringConfig, getLastRecalculationDate } from '@/lib/scoring/actions'
 import { ScoringConfigForm } from '@/components/features/settings/ScoringConfigForm'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'

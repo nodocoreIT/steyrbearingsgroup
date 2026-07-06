@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getClientWithScore, getClientValidationStatus } from '@/lib/clients/queries'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'

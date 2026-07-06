@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getAllCampaigns } from '@/lib/campaigns/queries'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'

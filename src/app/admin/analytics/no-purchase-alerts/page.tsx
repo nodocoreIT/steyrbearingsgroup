@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getAllAlerts } from '@/lib/alerts/no-purchase'
 import { acknowledgeAlertAction, resolveAlertAction } from '@/lib/alerts/actions'
 import { Badge } from '@/components/ui/badge'

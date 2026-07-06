@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getQuoteById } from '@/lib/quotes/queries'
 import { clientAcceptQuote, clientDeclineQuote } from '@/lib/quotes/actions'
 import { getClientIdByProfileId } from '@/lib/interest-lists/queries'

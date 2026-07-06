@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getQuoteById, getQuoteApprovalLog } from '@/lib/quotes/queries'
 import { approveQuote, rejectQuote, sendQuoteToClient } from '@/lib/quotes/actions'
 import { getUser } from '@/lib/auth/get-user'

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { createClient } from '@/lib/supabase/server'
 import { db } from '@/db'
 import { profiles, appConfig } from '@/db/schema'

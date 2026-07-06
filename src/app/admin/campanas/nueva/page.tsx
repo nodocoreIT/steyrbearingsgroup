@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { redirect } from 'next/navigation'
 import { resolveSegment, type SegmentFilter } from '@/lib/campaigns/queries'
 import { createCampaign } from '@/lib/campaigns/actions'

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
 import { getSearchAnalytics } from '@/lib/analytics/search'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'

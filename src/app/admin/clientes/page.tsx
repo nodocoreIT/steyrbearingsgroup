@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getAllClients } from '@/lib/clients/queries'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'

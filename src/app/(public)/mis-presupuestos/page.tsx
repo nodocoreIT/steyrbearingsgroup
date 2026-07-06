@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getQuotesByClient } from '@/lib/quotes/queries'
 import { getClientIdByProfileId } from '@/lib/interest-lists/queries'
 import { createClient } from '@/lib/supabase/server'

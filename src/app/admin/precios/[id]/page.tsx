@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getPriceListById, getPriceListRules, getPriceListClientsCount } from '@/lib/pricing/queries'
 import {
   addPriceListRule,

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { getProductById } from '@/lib/products/queries'

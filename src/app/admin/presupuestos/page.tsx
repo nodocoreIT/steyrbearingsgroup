@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getAllQuotes, getPendingQuoteRequests } from '@/lib/quotes/queries'
 import { convertQuoteRequest } from '@/lib/quotes/actions'
 import { getUser } from '@/lib/auth/get-user'

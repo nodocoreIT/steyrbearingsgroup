@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
 import { getAllCategories } from '@/lib/categories/queries'
 import { deleteCategory } from '@/lib/categories/actions'

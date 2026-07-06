@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
 import { getActiveProducts } from '@/lib/products/queries'
 import { getAllCategories } from '@/lib/categories/queries'

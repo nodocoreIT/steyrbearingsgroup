@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getUser } from '@/lib/auth/get-user'
 import { isAdmin } from '@/lib/auth/roles'
 import { getQuotesByStatus, getPendingApprovalCount, getQuoteConversionRate } from '@/lib/analytics/quotes'

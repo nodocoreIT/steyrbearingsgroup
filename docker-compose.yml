@@ -1,0 +1,20 @@
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: seekingbusiness_db
+    environment:
+      POSTGRES_USER: sb_user
+      POSTGRES_PASSWORD: sb_pass
+      POSTGRES_DB: seekingbusiness
+    ports:
+      - "5433:5432"
+    volumes:
+      - seekingbusiness_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sb_user -d seekingbusiness"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  seekingbusiness_pgdata:

@@ -8,6 +8,7 @@ import {
   sendQueue,
   clients,
 } from '@/db/schema'
+import { triggerEmailQueue } from '@/lib/email/n8n-trigger'
 import { eq, and } from 'drizzle-orm'
 import type { ActionResult } from '@/lib/types/action-result'
 import { requireAdmin } from '@/lib/auth/get-user'
@@ -194,6 +195,9 @@ export async function sendCampaignNow(campaignId: string): Promise<ActionResult<
         attempts: 0,
       })
     }
+
+    // Trigger n8n to process the queue immediately (fire-and-forget)
+    triggerEmailQueue()
 
     // Update campaign status to running
     await db
